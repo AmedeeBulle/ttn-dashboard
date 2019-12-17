@@ -1,0 +1,35 @@
+#
+# docker-compose-https.yml
+#
+# Add-on compose file for https
+#
+# Copyright (c) 2019 Philippe Vanhaesendonck
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+# SPDX-License-Identifier: UPL-1.0
+#
+# Description: ensure nginx listen on https port and define an additional
+# service (proxy-letsencrypt) which handles the Let's Encrypt certificates
+# for the exposed services (Grafana dashboard and Nore-RED)
+#
+
+version: '3.5'
+services:
+  proxy-nginx:
+    ports:
+      - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTPS:-443}:443"
+
+  proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
+    restart: always
+    volumes:
+      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
+      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      NGINX_DOCKER_GEN_CONTAINER: ${PROXY_GEN:-proxy-gen}
+      NGINX_PROXY_CONTAINER: ${PROXY_NGINX:-proxy-nginx}
+      DEFAULT_EMAIL: ${PROXY_EMAIL?You must provide an e-mail for Let's Encrypt registration}
