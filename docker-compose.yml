@@ -1,0 +1,99 @@
+version: '3.5'
+services:
+  proxy-nginx:
+    image: nginx
+    container_name: ${PROXY_NGINX:-proxy-nginx}
+    restart: always
+    ports:
+      - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTP:-80}:80"
+      - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTPS:-443}:443"
+    volumes:
+      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
+      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:ro
+      - ${PROXY_DATA_PATH:-./data/proxy}/htpasswd:/etc/nginx/htpasswd:ro
+
+  proxy-gen:
+    image: jwilder/docker-gen
+    command: -notify-sighup ${PROXY_NGINX:-proxy-nginx} -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+    container_name: ${PROXY_GEN:-proxy-gen}
+    restart: always
+    volumes:
+      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
+      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:ro
+      - ${PROXY_DATA_PATH:-./data/proxy}/htpasswd:/etc/nginx/htpasswd:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
+
+  proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
+    restart: always
+    volumes:
+      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
+      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
+      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      NGINX_DOCKER_GEN_CONTAINER: ${PROXY_GEN:-proxy-gen}
+      NGINX_PROXY_CONTAINER: ${PROXY_NGINX:-proxy-nginx}
+      DEFAULT_EMAIL: ${PROXY_EMAIL?You must provide an e-mail for Let's Encrypt registration}
+
+  node-red:
+    build: node-red
+    image: node-red-ttn
+    restart: unless-stopped
+    volumes:
+      # Need to be accessible by 1000:1000
+      - ${TTN_DATA_PATH:-./data/ttn}/node-red:/data
+    environment:
+      VIRTUAL_PORT: 1880
+      VIRTUAL_HOST: ${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}
+      LETSENCRYPT_HOST: ${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}
+
+  influxdb:
+    image: influxdb:1.7.9
+    restart: unless-stopped
+    volumes:
+      - ${TTN_DATA_PATH:-./data/ttn}/influxdb:/var/lib/influxdb
+      - ./influxdb/types.db:/usr/share/collectd/types.db:ro
+      - ${TTN_DATA_PATH:-./data/ttn}/collectd/auth_file:/etc/collectd/auth_file:ro
+    environment:
+      INFLUXDB_HTTP_AUTH_ENABLED: "true"
+      # Following are only used at creation time
+      INFLUXDB_DB: ${TTN_INFLUX_DB:-ttn}
+      INFLUXDB_ADMIN_USER: ${TTN_INFLUX_ADMIN_USER:-ttn-admin}
+      INFLUXDB_ADMIN_PASSWORD: ${TTN_INFLUX_ADMIN_PASSWORD:?InfluxDB Admin password is mandatory}
+      INFLUXDB_USER: ${TTN_INFLUX_USER:-ttn-user}
+      INFLUXDB_USER_PASSWORD: ${TTN_INFLUX_PASSWORD:?InfluxDB user password is mandatory}
+      INFLUXDB_READ_USER: ${TTN_INFLUX_READ_USER:-ttn-read}
+      INFLUXDB_READ_USER_PASSWORD: ${TTN_INFLUX_READ_PASSWORD:?InfluxDB read-only password is mandatory}
+      # Additional configuration options
+      INFLUXDB_COLLECTD_ENABLED: "${TTN_INFLUXDB_COLLECTD_ENABLED:-false}"
+      INFLUXDB_COLLECTD_DATABASE: ${TTN_INFLUX_COLLECT_DB:-ttn}
+      INFLUXDB_COLLECTD_SECURITY_LEVEL: ${TTN_INFLUXDB_COLLECTD_SECURITY_LEVEL:-encrypt}
+    ports:
+      - "${TTN_INFLUXDB_BIND_ADDRESS:-127.0.0.1:25826}:25826/udp"
+
+  grafana:
+    image: grafana/grafana:6.5.2
+    restart: unless-stopped
+    volumes:
+      - ${TTN_DATA_PATH:-./data/ttn}/grafana:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${TTN_GRAFANA_ADMIN_PASSWORD:?Grafana Admin password is mandatory}
+      VIRTUAL_PORT: 3000
+      VIRTUAL_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
+      LETSENCRYPT_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
+      # GF_SERVER_DOMAIN: ${TTN_DASHBOARD_APACHE_FQDN}
+      # GF_SERVER_ROOT_URL: 'https://%(domain)s/grafana/'
+      # GF_SMTP_ENABLED: ${TTN_DASHBOARD_GRAFANA_SMTP_ENABLED:-false}
+      # GF_SMTP_HOST: ${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}:25
+      # GF_SMTP_FROM_ADDRESS: "grafana@${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}"
+      # GF_SMTP_FROM_NAME: "${TTN_DASHBOARD_GRAFANA_PROJECT_NAME:-Default} grafana admin"
+      # GF_LOG_MODE: ${TTN_DASHBOARD_GRAFANA_LOG_MODE:-console,file}
+      # GF_LOG_LEVEL: ${TTN_DASHBOARD_GRAFANA_LOG_LEVEL:-info}
