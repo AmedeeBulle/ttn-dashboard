@@ -11,9 +11,9 @@
 #
 # SPDX-License-Identifier: UPL-1.0
 #
-# Ensure nginx listen on https port and define an additionalservice
-# (proxy-letsencrypt) which handles the Let's Encrypt certificates for the
-# exposed services (Grafana dashboard and Nore-RED)
+# Add https port for NGINX and define an additional service (proxy-letsencrypt)
+# which handles the Let's Encrypt certificates for the exposed services
+# (Grafana dashboard and Node-RED)
 #
 #######################################
 
@@ -28,10 +28,10 @@ services:
     container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
     restart: always
     volumes:
-      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
-      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:rw
+      - proxy_conf:/etc/nginx/conf.d
+      - proxy_vhosts:/etc/nginx/vhost.d
+      - proxy_html:/usr/share/nginx/html
+      - proxy_certs:/etc/nginx/certs:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       NGINX_DOCKER_GEN_CONTAINER: ${PROXY_GEN:-proxy-gen}

@@ -11,7 +11,7 @@
 #
 # SPDX-License-Identifier: UPL-1.0
 #
-# Describes the following services:
+# Define the following services:
 # - Reverse proxy
 #   - nginx: the NGINX proxy itself
 #   - proxy-gen: generates the NGINX configuration dynamically
@@ -35,11 +35,11 @@ services:
     ports:
       - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTP:-80}:80"
     volumes:
-      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
-      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:ro
-      - ${PROXY_DATA_PATH:-./data/proxy}/htpasswd:/etc/nginx/htpasswd:ro
+      - proxy_conf:/etc/nginx/conf.d
+      - proxy_vhosts:/etc/nginx/vhost.d
+      - proxy_html:/usr/share/nginx/html
+      - proxy_certs:/etc/nginx/certs:ro
+      - proxy_passwd:/etc/nginx/htpasswd:ro
 
   proxy-gen:
     image: jwilder/docker-gen
@@ -47,13 +47,13 @@ services:
     container_name: ${PROXY_GEN:-proxy-gen}
     restart: always
     volumes:
-      - ${PROXY_DATA_PATH:-./data/proxy}/conf.d:/etc/nginx/conf.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/vhost.d:/etc/nginx/vhost.d
-      - ${PROXY_DATA_PATH:-./data/proxy}/html:/usr/share/nginx/html
-      - ${PROXY_DATA_PATH:-./data/proxy}/certs:/etc/nginx/certs:ro
-      - ${PROXY_DATA_PATH:-./data/proxy}/htpasswd:/etc/nginx/htpasswd:ro
+      - proxy_conf:/etc/nginx/conf.d
+      - proxy_vhosts:/etc/nginx/vhost.d
+      - proxy_html:/usr/share/nginx/html
+      - proxy_certs:/etc/nginx/certs:ro
+      - proxy_passwd:/etc/nginx/htpasswd:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
+      - ./nginx/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
 
   node-red:
     build: node-red
@@ -61,7 +61,7 @@ services:
     restart: unless-stopped
     volumes:
       # Need to be accessible by 1000:1000
-      - ${TTN_DATA_PATH:-./data/ttn}/node-red:/data
+      - ttn_node_red:/data
     environment:
       VIRTUAL_PORT: 1880
       VIRTUAL_HOST: ${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}
@@ -71,9 +71,9 @@ services:
     image: influxdb:1.7.9
     restart: unless-stopped
     volumes:
-      - ${TTN_DATA_PATH:-./data/ttn}/influxdb:/var/lib/influxdb
+      - ttn_influxdb:/var/lib/influxdb
+      - ttn_collectd:/etc/collectd
       - ./influxdb/types.db:/usr/share/collectd/types.db:ro
-      - ${TTN_DATA_PATH:-./data/ttn}/collectd/auth_file:/etc/collectd/auth_file:ro
     environment:
       INFLUXDB_HTTP_AUTH_ENABLED: "true"
       # Following are only used at creation time
@@ -95,7 +95,7 @@ services:
     image: grafana/grafana:6.5.2
     restart: unless-stopped
     volumes:
-      - ${TTN_DATA_PATH:-./data/ttn}/grafana:/var/lib/grafana
+      - ttn_grafana:/var/lib/grafana
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${TTN_GRAFANA_ADMIN_PASSWORD:?Grafana Admin password is mandatory}
       VIRTUAL_PORT: 3000
@@ -109,3 +109,14 @@ services:
       # GF_SMTP_FROM_NAME: "${TTN_DASHBOARD_GRAFANA_PROJECT_NAME:-Default} grafana admin"
       # GF_LOG_MODE: ${TTN_DASHBOARD_GRAFANA_LOG_MODE:-console,file}
       # GF_LOG_LEVEL: ${TTN_DASHBOARD_GRAFANA_LOG_LEVEL:-info}
+
+volumes:
+  proxy_conf:
+  proxy_vhosts:
+  proxy_html:
+  proxy_certs:
+  proxy_passwd:
+  ttn_node_red:
+  ttn_influxdb:
+  ttn_collectd:
+  ttn_grafana:
