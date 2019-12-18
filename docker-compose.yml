@@ -31,7 +31,7 @@ services:
   proxy-nginx:
     image: nginx
     container_name: ${PROXY_NGINX:-proxy-nginx}
-    restart: always
+    restart: unless-stopped
     ports:
       - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTP:-80}:80"
     volumes:
@@ -45,7 +45,9 @@ services:
     image: jwilder/docker-gen
     command: -notify-sighup ${PROXY_NGINX:-proxy-nginx} -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
     container_name: ${PROXY_GEN:-proxy-gen}
-    restart: always
+    restart: unless-stopped
+    depends_on:
+      - proxy-nginx
     volumes:
       - proxy_conf:/etc/nginx/conf.d
       - proxy_vhosts:/etc/nginx/vhost.d
@@ -59,8 +61,10 @@ services:
     build: node-red
     image: node-red-ttn
     restart: unless-stopped
+    depends_on:
+      - proxy-nginx
+      - influxdb
     volumes:
-      # Need to be accessible by 1000:1000
       - ttn_node_red:/data
     environment:
       VIRTUAL_PORT: 1880
@@ -84,7 +88,10 @@ services:
       INFLUXDB_USER_PASSWORD: ${TTN_INFLUX_PASSWORD:?InfluxDB user password is mandatory}
       INFLUXDB_READ_USER: ${TTN_INFLUX_READ_USER:-ttn-read}
       INFLUXDB_READ_USER_PASSWORD: ${TTN_INFLUX_READ_PASSWORD:?InfluxDB read-only password is mandatory}
-      # Additional configuration options
+      # Control logging
+      INFLUXDB_DATA_QUERY_LOG_ENABLED: "${TTN_INFLUXDB_DATA_QUERY_LOG_ENABLED:-true}"
+      INFLUXDB_HTTP_LOG_ENABLED: "${TTN_INFLUXDB_HTTP_LOG_ENABLED:-true}"
+      # Optionnal configuration for Collectd
       INFLUXDB_COLLECTD_ENABLED: "${TTN_INFLUXDB_COLLECTD_ENABLED:-false}"
       INFLUXDB_COLLECTD_DATABASE: ${TTN_INFLUX_COLLECT_DB:-ttn}
       INFLUXDB_COLLECTD_SECURITY_LEVEL: ${TTN_INFLUXDB_COLLECTD_SECURITY_LEVEL:-encrypt}
@@ -94,6 +101,9 @@ services:
   grafana:
     image: grafana/grafana:6.5.2
     restart: unless-stopped
+    depends_on:
+      - proxy-nginx
+      - influxdb
     volumes:
       - ttn_grafana:/var/lib/grafana
     environment:

@@ -26,7 +26,10 @@ services:
   proxy-letsencrypt:
     image: jrcs/letsencrypt-nginx-proxy-companion
     container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
-    restart: always
+    restart: unless-stopped
+    depends_on:
+      - proxy-nginx
+      - proxy-gen
     volumes:
       - proxy_conf:/etc/nginx/conf.d
       - proxy_vhosts:/etc/nginx/vhost.d
