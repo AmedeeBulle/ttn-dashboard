@@ -32,6 +32,7 @@ services:
     image: nginx
     container_name: ${PROXY_NGINX:-proxy-nginx}
     restart: unless-stopped
+    userns_mode: "host"
     ports:
       - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTP:-80}:80"
     volumes:
@@ -46,6 +47,7 @@ services:
     command: -notify-sighup ${PROXY_NGINX:-proxy-nginx} -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
     container_name: ${PROXY_GEN:-proxy-gen}
     restart: unless-stopped
+    userns_mode: "host"
     depends_on:
       - proxy-nginx
     volumes:
@@ -111,8 +113,6 @@ services:
       VIRTUAL_PORT: 3000
       VIRTUAL_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
       LETSENCRYPT_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
-      # GF_SERVER_DOMAIN: ${TTN_DASHBOARD_APACHE_FQDN}
-      # GF_SERVER_ROOT_URL: 'https://%(domain)s/grafana/'
       # GF_SMTP_ENABLED: ${TTN_DASHBOARD_GRAFANA_SMTP_ENABLED:-false}
       # GF_SMTP_HOST: ${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}:25
       # GF_SMTP_FROM_ADDRESS: "grafana@${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}"

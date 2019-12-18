@@ -27,6 +27,7 @@ services:
     image: jrcs/letsencrypt-nginx-proxy-companion
     container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
     restart: unless-stopped
+    userns_mode: "host"
     depends_on:
       - proxy-nginx
       - proxy-gen
