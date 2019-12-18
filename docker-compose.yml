@@ -110,15 +110,13 @@ services:
       - ttn_grafana:/var/lib/grafana
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${TTN_GRAFANA_ADMIN_PASSWORD:?Grafana Admin password is mandatory}
+      # Logging
+      GF_LOG_MODE: console
+      GF_LOG_LEVEL: ${TTN_GRAFANA_LOG_LEVEL:-info}
+      # Proxy configuration
       VIRTUAL_PORT: 3000
       VIRTUAL_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
       LETSENCRYPT_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
-      # GF_SMTP_ENABLED: ${TTN_DASHBOARD_GRAFANA_SMTP_ENABLED:-false}
-      # GF_SMTP_HOST: ${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}:25
-      # GF_SMTP_FROM_ADDRESS: "grafana@${TTN_DASHBOARD_GRAFANA_SMTP_HOST_FQDN:-localhost}"
-      # GF_SMTP_FROM_NAME: "${TTN_DASHBOARD_GRAFANA_PROJECT_NAME:-Default} grafana admin"
-      # GF_LOG_MODE: ${TTN_DASHBOARD_GRAFANA_LOG_MODE:-console,file}
-      # GF_LOG_LEVEL: ${TTN_DASHBOARD_GRAFANA_LOG_LEVEL:-info}
 
 volumes:
   proxy_conf:
