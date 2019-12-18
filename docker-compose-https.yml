@@ -1,17 +1,21 @@
+#######################################
 #
 # docker-compose-https.yml
 #
 # Add-on compose file for https
 #
 # Copyright (c) 2019 Philippe Vanhaesendonck
+#
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
+#
 # SPDX-License-Identifier: UPL-1.0
 #
-# Description: ensure nginx listen on https port and define an additional
-# service (proxy-letsencrypt) which handles the Let's Encrypt certificates
-# for the exposed services (Grafana dashboard and Nore-RED)
+# Ensure nginx listen on https port and define an additionalservice
+# (proxy-letsencrypt) which handles the Let's Encrypt certificates for the
+# exposed services (Grafana dashboard and Nore-RED)
 #
+#######################################
 
 version: '3.5'
 services:
