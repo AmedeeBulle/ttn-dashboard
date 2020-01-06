@@ -1,0 +1,3 @@
+[submodule "proxy-letsencrypt"]
+	path = proxy-letsencrypt
+	url = https://github.com/JrCs/docker-letsencrypt-nginx-proxy-companion.git

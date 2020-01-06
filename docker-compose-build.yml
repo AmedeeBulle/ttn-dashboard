@@ -1,0 +1,31 @@
+#######################################
+#
+# docker-compose-build.yml
+#
+# Build 
+#
+# Copyright (c) 2019 Philippe Vanhaesendonck
+#
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+#
+# SPDX-License-Identifier: UPL-1.0
+#
+# Build the above containers. These containers are only available for X86.
+# To run on another architecture (e.g. Raspberry Pi, ...) we need to build
+# these locally
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose-build.yml build
+#
+#######################################
+
+version: '3.5'
+services:
+  proxy-gen:
+    image: jwilder/docker-gen
+    build: proxy-gen
+
+  proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    build: proxy-letsencrypt
