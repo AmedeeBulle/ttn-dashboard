@@ -1,3 +1,7 @@
+#
+# Build jwilder/docker-gen image from source
+# (Docker hub host only x86_64 image)
+#
 FROM golang:1.13-alpine AS go-builder
 
 ENV DOCKER_GEN_VERSION=0.7.4
@@ -18,6 +22,8 @@ RUN go get github.com/jwilder/docker-gen \
     && make all
 
 FROM alpine:3.10
+
+LABEL maintainer="Philippe Vanhaesendonck"
 
 ENV DOCKER_HOST=unix:///tmp/docker.sock
 

@@ -16,7 +16,10 @@
 #
 # Network needs to be created manually, e.g.:
 #   docker network create proxy-net
-#   docker-compose -f docker-compose.yml -f docker-compose-net.yml up
+#   docker-compose -f docker-compose.yml \
+#                  -f docker-compose-https.yml \
+#                  -f docker-compose-net.yml \
+#                  up
 #
 #######################################
 

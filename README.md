@@ -5,21 +5,23 @@ TTN Dashboard
 - [Introduction](#introduction)
 - [Requirements](#requirements)
   - [Linux host](#linux-host)
-  - [Domain name](#domain-name)
+  - [Domain names](#domain-names)
 - [Installation](#installation)
   - [Initial setup](#initial-setup)
   - [Managing Containers](#managing-containers)
   - [Adding Secure HTTP (HTTPS)](#adding-secure-http-https)
 - [Data persistence](#data-persistence)
-- [Configuring the dashboard -- overview](#configuring-the-dashboard----overview)
+- [Configuring the dashboard](#configuring-the-dashboard)
   - [Node-RED](#node-red)
     - [Getting data from The Things Network](#getting-data-from-the-things-network)
     - [Storing data in InfluxDB](#storing-data-in-influxdb)
   - [Grafana](#grafana)
 - [Advanced Configuration](#advanced-configuration)
   - [Additional parameters](#additional-parameters)
-  - [Monitoring your server](#monitoring-your-server)
-  - [Use the NGINX reverse proxy for other containers](#use-the-nginx-reverse-proxy-for-other-containers)
+  - [Monitoring your servers with collectd](#monitoring-your-servers-with-collectd)
+    - [Monitoring the TTN Dashboard host](#monitoring-the-ttn-dashboard-host)
+    - [Monitoring additional hosts](#monitoring-additional-hosts)
+  - [Using the NGINX reverse proxy for other containers](#using-the-nginx-reverse-proxy-for-other-containers)
 <!-- TOC END -->
 
 # Introduction
@@ -54,7 +56,7 @@ If you want to expose your dashboard to the Internet, you will need domain names
 The NGINX reverse proxy uses the domain name to route the requests to either Grafana or Node-RED; you will needs two domain names pointing to your server -- e.g.: `ttn-grafana.example.com` and `ttn-node.example.com`.\
 If you don't have your own domain you can use a free service like [Duck DNS](https://www.duckdns.org).
 
-For local home usage (intranet) you can use a local DNS server or even the _hosts_ file of your computer.
+For local/home usage (intranet) you can use a local DNS server or even the _hosts_ file of your workstation.
 
 # Installation
 ## Initial setup
@@ -78,7 +80,7 @@ For local home usage (intranet) you can use a local DNS server or even the _host
   - Grafana
     - `TTN_GRAFANA_ADMIN_PASSWORD`: password for the admin user (additional users are defined in Grafana itself)
 1. Building container images.  
-  The proxy container images are only available for the `x86-64`; if you run this setup on a different architecture, you will need to build these as well.
+  The proxy helper images are only available for the `x86-64` architecture; if you run this setup on a different architecture, you will need to build these images as well.
     - `x86-64` architecture: this is the common case, only the `Node-RED` container image needs to be built:
     ```
     docker-compose build
@@ -106,10 +108,12 @@ For local home usage (intranet) you can use a local DNS server or even the _host
 
 The InfluxDB database will be created and initialised the first time the container runs.
 
-You should be able to browse to your new Node-RED/Grafana setup using the defined domain names.
+You should be able to browse to your new Node-RED/Grafana setup using the specified domain names.
 
 ## Managing Containers
-To start the containers (in _detached_ mode):
+Basic `docker-compose` commands.
+
+Start the containers (in _detached_ mode):
 ```
 docker-compose up -d
 ```
@@ -135,7 +139,7 @@ If you expose your setup to the Internet you should enable `HTTPS` to encrypt th
 This will happen automatically once you enable the `letsencrypt-nginx-proxy-companion` container:
 
 1. Set the `PROXY_EMAIL` variable in the `.env` configuration file.  
-   Provide a valid email address so that Let's Encrypt can warn you about expiring certificates and allow you to recover your account.
+  Provide a valid email address so that Let's Encrypt can warn you about expiring certificates and allow you to recover your account
 1. Stop the containers (if they already run)
   ```
   docker-compose down
@@ -158,7 +162,7 @@ Data (database, certificates, ...) is stored in docker named volumes and persist
  docker-compose down --volumes
  ```
 
-# Configuring the dashboard -- overview
+# Configuring the dashboard
 This section covers the settings specific to this project; detailed instructions on how to use Node-RED and Grafana is outside the scope of this document.
 
 ## Node-RED
@@ -166,7 +170,7 @@ This section covers the settings specific to this project; detailed instructions
 _The Things Network Node-RED Nodes_ are already installed in the Node-RED instance. Information on how to configure these is available in the [Quickstart](https://github.com/TheThingsNetwork/nodered-app-node/blob/master/docs/quickstart.md#configuring-your-application)
 
 ### Storing data in InfluxDB
-Configuration of the _Server_ in the InfluxDB nodes:
+Configuration of the InfluxDB _Server_ in the InfluxDB nodes:
 - `Host`: influxdb
 - `Port`: 8086
 - `Database`: same as `TTN_INFLUX_DB` parameter (default: ttn)
@@ -175,7 +179,7 @@ Configuration of the _Server_ in the InfluxDB nodes:
 - `Enable secure (SSL/TLS) connection`: unchecked
 
 ## Grafana
-Create an InfluxDB data source (leave all fields nor mentioned here to their default value):
+Create an InfluxDB data source (leave all fields not mentioned here to their default value):
 - `URL`: http://influxdb:8086
 - `Database`: same as `TTN_INFLUX_DB` parameter (default: ttn)
 - `User`: same as `TTN_INFLUX_READ_USER` parameter (default: ttn-read)
@@ -187,13 +191,13 @@ Create an InfluxDB data source (leave all fields nor mentioned here to their def
 The setup can be further customised (usernames, log level, ...) in the `.env`. It should be self-explanatory.
 
 ## Monitoring your servers with collectd
-You can monitor your servers with `collectd`, and send the data to your InfuxDB instance
+You can monitor your servers with [collectd](https://collectd.org/), and send the data to your InfuxDB instance
 
-### Monitoring the dashboard host
+### Monitoring the TTN Dashboard host
 If you only want to monitor the dashboard host, perform the following easy steps:
 
-1. Install `collectd` using your operating system package manager (`yum`, `apt`, ...)
-1. On the `collectd` side, ensure the `network` plugin is enabled and configured -- E.g. in `/etc/collectd.conf`:
+1. Install collectd using your operating system package manager (`yum`, `apt`, ...)
+1. On the collectd side, ensure the `network` plugin is enabled and configured -- E.g. in `/etc/collectd.conf`:
   ```
   ...
   LoadPlugin network
@@ -218,21 +222,21 @@ If you only want to monitor the dashboard host, perform the following easy steps
   # Security level (none, sign, encrypt)
   INFLUXDB_COLLECTD_SECURITY_LEVEL=none
   ```
-1. Re-start `collectd` and the containers
+1. Re-start collectd and the containers
 
 ### Monitoring additional hosts
 If you want to monitor additional hosts (e.g. your gateways, ...), you will have to use the (private) IP of your server instead of the loopback interface.\
-It is also recommended to encrypt the traffic.
+It is also recommended to encrypt the collectd traffic.
 
-1. Install `collectd` using your operating system package manager (`yum`, `apt`, ...)
-1. On the `collectd` side, ensure the `network` plugin is enabled and configured -- E.g. in `/etc/collectd.conf`:
+1. Install collectd using your operating system package manager (`yum`, `apt`, ...)
+1. On the collectd side, ensure the `network` plugin is enabled and configured -- E.g. in `/etc/collectd.conf`:
   ```
   ...
   LoadPlugin network
   ...
   <Plugin network>
     # client setup:
-    <Server "<YourPrivateServerIP>" "25826">
+    <Server "<YourServerPrivateIP>" "25826">
       SecurityLevel Encrypt
       Username "<YourCollectdUser>"
       Password "<YourSecretPassword>"
@@ -248,7 +252,7 @@ It is also recommended to encrypt the traffic.
   # Database name for collectd (by default use the initial DB)
   TTN_INFLUX_COLLECTD_DB=ttn
   # Port to bind on: do NOT bind on your public interface!
-  TTN_INFLUXDB_BIND_ADDRESS=<YourPrivateServerIP>:25826
+  TTN_INFLUXDB_BIND_ADDRESS=<YourServerPrivateIP>:25826
   # Security level (none, sign, encrypt)
   INFLUXDB_COLLECTD_SECURITY_LEVEL=encrypt
   ```
@@ -264,7 +268,7 @@ local               ttn-dashboard_ttn_influxdb
 $ # copy the file to the volume
 $ docker cp auth_file ttn-dashboard_ttn_influxdb:/etc/collectd/
 ```
-1. Re-start `collectd` and the containers
+1. Re-start collectd and the containers
 
 ## Using the NGINX reverse proxy for other containers
 The NGINX reverse proxy setup can be used for additional services running on your node, but they must use the same docker network.\
