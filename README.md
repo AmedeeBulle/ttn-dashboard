@@ -220,7 +220,7 @@ If you only want to monitor the dashboard host, perform the following easy steps
   # Port to bind on: do NOT bind on your public interface!
   TTN_INFLUXDB_BIND_ADDRESS=127.0.0.1:25826
   # Security level (none, sign, encrypt)
-  INFLUXDB_COLLECTD_SECURITY_LEVEL=none
+  TTN_INFLUXDB_COLLECTD_SECURITY_LEVEL=none
   ```
 1. Re-start collectd and the containers
 
@@ -254,7 +254,7 @@ It is also recommended to encrypt the collectd traffic.
   # Port to bind on: do NOT bind on your public interface!
   TTN_INFLUXDB_BIND_ADDRESS=<YourServerPrivateIP>:25826
   # Security level (none, sign, encrypt)
-  INFLUXDB_COLLECTD_SECURITY_LEVEL=encrypt
+  TTN_INFLUXDB_COLLECTD_SECURITY_LEVEL=encrypt
   ```
 1. Create a file named `auth_file` with the username/password pair you specified in the `/etc/collectd.conf` file:
   ```
