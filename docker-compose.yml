@@ -102,7 +102,7 @@ services:
       - "${TTN_INFLUXDB_BIND_ADDRESS:-127.0.0.1:25826}:25826/udp"
 
   grafana:
-    image: grafana/grafana:6.5.2
+    image: grafana/grafana:6.7.4
     restart: unless-stopped
     depends_on:
       - proxy-nginx
