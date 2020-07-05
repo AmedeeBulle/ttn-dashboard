@@ -4,7 +4,7 @@
 #
 # Add-on compose file for https
 #
-# Copyright (c) 2019 Philippe Vanhaesendonck
+# Copyright (c) 2020 Philippe Vanhaesendonck
 #
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
@@ -19,25 +19,25 @@
 
 version: '3.5'
 services:
-  proxy-nginx:
-    ports:
-      - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTPS:-443}:443"
+  node-red:
+    labels:
+      # For Web, only redirection
+      - traefik.http.routers.ttn-node-red.middlewares=hsts@file
+      # HTTPS
+      - traefik.http.routers.ttn-node-red-https.entrypoints=${TRAEFIK_EP_WEBSECURE:-websecure}
+      - traefik.http.routers.ttn-node-red-https.rule=Host(`${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}`)
+      - traefik.http.routers.ttn-node-red-https.service=ttn-node-red
+      - traefik.http.routers.ttn-node-red-https.middlewares=ttn-node-red-auth, hsts@file
+      - traefik.http.routers.ttn-node-red-https.tls.certresolver=le
 
-  proxy-letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    container_name: ${PROXY_LETSENCRYPT:-proxy-letsencrypt}
-    restart: unless-stopped
-    userns_mode: "host"
-    depends_on:
-      - proxy-nginx
-      - proxy-gen
-    volumes:
-      - proxy_conf:/etc/nginx/conf.d
-      - proxy_vhosts:/etc/nginx/vhost.d
-      - proxy_html:/usr/share/nginx/html
-      - proxy_certs:/etc/nginx/certs:rw
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      NGINX_DOCKER_GEN_CONTAINER: ${PROXY_GEN:-proxy-gen}
-      NGINX_PROXY_CONTAINER: ${PROXY_NGINX:-proxy-nginx}
-      DEFAULT_EMAIL: ${PROXY_EMAIL?You must provide an e-mail for Let's Encrypt registration}
+  grafana:
+    labels:
+      # For Web, only redirection
+      - traefik.http.routers.ttn-grafana.middlewares=hsts@file
+      # HTTPS
+      - traefik.http.routers.ttn-grafana-https.entrypoints=${TRAEFIK_EP_WEBSECURE:-websecure}
+      - traefik.http.routers.ttn-grafana-https.rule=Host(`${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}`)
+      - traefik.http.routers.ttn-grafana-https.service=ttn-grafana
+      - traefik.http.routers.ttn-grafana-https.middlewares=hsts@file
+      - traefik.http.routers.ttn-grafana-https.tls.certresolver=le
+

@@ -1,6 +1,10 @@
 TTN Dashboard
 =============
 
+Experimental branch to use Traefik as reverse proxy.
+
+Documentation is NOT up-to-date.
+
 <!-- TOC START min:1 max:3 link:true asterisk:false update:true -->
 - [Introduction](#introduction)
 - [Requirements](#requirements)

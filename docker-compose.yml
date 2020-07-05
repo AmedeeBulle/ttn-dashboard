@@ -4,7 +4,7 @@
 #
 # Main compose file
 #
-# Copyright (c) 2019 Philippe Vanhaesendonck
+# Copyright (c) 2020 Philippe Vanhaesendonck
 #
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
@@ -28,58 +28,36 @@
 
 version: '3.5'
 services:
-  proxy-nginx:
-    image: nginx
-    container_name: ${PROXY_NGINX:-proxy-nginx}
-    restart: unless-stopped
-    userns_mode: "host"
-    ports:
-      - "${LISTEN_IP:-0.0.0.0}:${LISTEN_HTTP:-80}:80"
-    volumes:
-      - proxy_conf:/etc/nginx/conf.d
-      - proxy_vhosts:/etc/nginx/vhost.d
-      - proxy_html:/usr/share/nginx/html
-      - proxy_certs:/etc/nginx/certs:ro
-      - proxy_passwd:/etc/nginx/htpasswd:ro
-
-  proxy-gen:
-    image: jwilder/docker-gen
-    command: -notify-sighup ${PROXY_NGINX:-proxy-nginx} -watch /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
-    container_name: ${PROXY_GEN:-proxy-gen}
-    restart: unless-stopped
-    userns_mode: "host"
-    depends_on:
-      - proxy-nginx
-    volumes:
-      - proxy_conf:/etc/nginx/conf.d
-      - proxy_vhosts:/etc/nginx/vhost.d
-      - proxy_html:/usr/share/nginx/html
-      - proxy_certs:/etc/nginx/certs:ro
-      - proxy_passwd:/etc/nginx/htpasswd:ro
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
-
   node-red:
     build: node-red
     image: node-red-ttn
     restart: unless-stopped
     depends_on:
-      - proxy-nginx
       - influxdb
     volumes:
       - ttn_node_red:/data
-    environment:
-      VIRTUAL_PORT: 1880
-      VIRTUAL_HOST: ${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}
-      LETSENCRYPT_HOST: ${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}
+    networks:
+      - traefik
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ttn-node-red.entryPoints=${TRAEFIK_EP_WEB:-web}
+      - traefik.http.routers.ttn-node-red.rule=Host(`${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}`)
+      - traefik.http.routers.ttn-node-red.service=ttn-node-red
+      - traefik.http.routers.ttn-node-red.middlewares=ttn-node-red-auth
+      - traefik.http.services.ttn-node-red.loadbalancer.server.port=1880
+      - traefik.http.middlewares.ttn-node-red-auth.basicauth.users=${TTN_NODE_RED_CREDENTIALS:?Node-RED credentials are mandatory}
 
   influxdb:
-    image: influxdb:1.7.9
+    image: influxdb:1.8
     restart: unless-stopped
     volumes:
       - ttn_influxdb:/var/lib/influxdb
       - ttn_collectd:/etc/collectd
       - ./influxdb/types.db:/usr/share/collectd/types.db:ro
+      - /srv/backup/influxdb:/backup
+    networks:
+      - backend
     environment:
       INFLUXDB_HTTP_AUTH_ENABLED: "true"
       # Following are only used at creation time
@@ -104,27 +82,33 @@ services:
     image: grafana/grafana:6.5.2
     restart: unless-stopped
     depends_on:
-      - proxy-nginx
       - influxdb
     volumes:
       - ttn_grafana:/var/lib/grafana
+    networks:
+      - traefik
+      - backend
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${TTN_GRAFANA_ADMIN_PASSWORD:?Grafana Admin password is mandatory}
       # Logging
       GF_LOG_MODE: console
       GF_LOG_LEVEL: ${TTN_GRAFANA_LOG_LEVEL:-info}
-      # Proxy configuration
-      VIRTUAL_PORT: 3000
-      VIRTUAL_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
-      LETSENCRYPT_HOST: ${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ttn-grafana.entryPoints=${TRAEFIK_EP_WEB:-web}
+      - traefik.http.routers.ttn-grafana.rule=Host(`${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}`)
+      - traefik.http.routers.ttn-grafana.service=ttn-grafana
+      - traefik.http.services.ttn-grafana.loadbalancer.server.port=3000
 
 volumes:
-  proxy_conf:
-  proxy_vhosts:
-  proxy_html:
-  proxy_certs:
-  proxy_passwd:
   ttn_node_red:
   ttn_influxdb:
   ttn_collectd:
   ttn_grafana:
+
+networks:
+  traefik:
+    external:
+      name: ${TRAEFIK_NETWORK:-traefik}
+  backend:
+
