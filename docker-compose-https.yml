@@ -4,7 +4,7 @@
 #
 # Add-on compose file for https
 #
-# Copyright (c) 2020 Philippe Vanhaesendonck
+# Copyright (c) 2020,2022 Philippe Vanhaesendonck
 #
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
@@ -21,23 +21,28 @@ version: '3.5'
 services:
   node-red:
     labels:
+      # Enforce HTTPS
+      - traefik.http.middlewares.ttn-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.ttn-hsts.headers.stsSeconds=31536000
+      - traefik.http.middlewares.ttn-hsts.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.ttn-hsts.headers.stsPreload=true
       # For Web, only redirection
-      - traefik.http.routers.ttn-node-red.middlewares=hsts@file
+      - traefik.http.routers.ttn-node-red.middlewares=ttn-redirect
       # HTTPS
       - traefik.http.routers.ttn-node-red-https.entrypoints=${TRAEFIK_EP_WEBSECURE:-websecure}
       - traefik.http.routers.ttn-node-red-https.rule=Host(`${TTN_NODE_RED_HOST:?Hostname for Node-RED is mandatory}`)
       - traefik.http.routers.ttn-node-red-https.service=ttn-node-red
-      - traefik.http.routers.ttn-node-red-https.middlewares=ttn-node-red-auth, hsts@file
-      - traefik.http.routers.ttn-node-red-https.tls.certresolver=le
+      - traefik.http.routers.ttn-node-red-https.middlewares=ttn-node-red-auth, ttn-hsts
+      - traefik.http.routers.ttn-node-red-https.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
 
   grafana:
     labels:
       # For Web, only redirection
-      - traefik.http.routers.ttn-grafana.middlewares=hsts@file
+      - traefik.http.routers.ttn-grafana.middlewares=ttn-redirect
       # HTTPS
       - traefik.http.routers.ttn-grafana-https.entrypoints=${TRAEFIK_EP_WEBSECURE:-websecure}
       - traefik.http.routers.ttn-grafana-https.rule=Host(`${TTN_GRAFANA_HOST:?Hostname for Grafana is mandatory}`)
       - traefik.http.routers.ttn-grafana-https.service=ttn-grafana
-      - traefik.http.routers.ttn-grafana-https.middlewares=hsts@file
-      - traefik.http.routers.ttn-grafana-https.tls.certresolver=le
+      - traefik.http.routers.ttn-grafana-https.middlewares=ttn-hsts
+      - traefik.http.routers.ttn-grafana-https.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
 

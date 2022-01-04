@@ -1,0 +1,56 @@
+#######################################
+#
+# docker-compose-traefik.yml
+#
+# Add-on compose file for Traefik Edge Router
+#
+# Copyright (c) 2022 Philippe Vanhaesendonck
+#
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+#
+# SPDX-License-Identifier: UPL-1.0
+#
+# Add traefik Edge Router container. It is provided as a separate to make it
+# optional if you already run a Traefik instance on your host.
+#
+#######################################
+
+version: '3.5'
+
+services:
+  traefik:
+    # The official v2.5 Traefik docker image
+    image: traefik:v2.5
+    restart: unless-stopped
+    command:
+      - "--log.level=INFO"
+      - "--api.insecure=false"
+      - "--api.dashboard=false"
+      - "--api.debug=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=${TRAEFIK_NETWORK:-traefik}"
+      - "--providers.file.directory=/etc/traefik/dynamic.d"
+      - "--providers.file.watch=false"
+      - "--entrypoints.${TRAEFIK_EP_WEB:-web}.address=:80"
+      - "--entrypoints.${TRAEFIK_EP_WEBSECURE:-websecure}.address=:443"
+      - "--certificatesresolvers.${TRAEFIK_CERTRESOLVER:-le}.acme.email=${TRAEFIK_EMAIL:?Email is mandatory}"
+      - "--certificatesresolvers.${TRAEFIK_CERTRESOLVER:-le}.acme.storage=/etc/traefik/acme/acme.json"
+      - "--certificatesresolvers.${TRAEFIK_CERTRESOLVER:-le}.acme.httpchallenge=true"
+      - "--certificatesresolvers.${TRAEFIK_CERTRESOLVER:-le}.acme.httpchallenge.entrypoint=${TRAEFIK_EP_WEB:-web}"
+    networks:
+      - traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - ${TRAEFIK_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ./traefik/dynamic.d:/etc/traefik/dynamic.d:ro
+      - ./traefik/acme:/etc/traefik/acme:rw
+
+networks:
+  traefik:
+    external:
+      name: ${TRAEFIK_NETWORK:-traefik}
