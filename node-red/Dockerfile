@@ -3,7 +3,7 @@
 #
 
 # Official Node-RED container
-FROM nodered/node-red:1.1.0-12
+FROM nodered/node-red:2.1.4-1
 
 LABEL maintainer="Philippe Vanhaesendonck"
 
