@@ -4,7 +4,7 @@
 #
 # Main compose file
 #
-# Copyright (c) 2020 Philippe Vanhaesendonck
+# Copyright (c) 2020,2022 Philippe Vanhaesendonck
 #
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
@@ -16,7 +16,7 @@
 #   - nginx: the NGINX proxy itself
 #   - proxy-gen: generates the NGINX configuration dynamically
 # - Dashboard
-#   - node-red: Node-RED application with the TTN and InfluxDB nodes
+#   - node-red: Node-RED application with InfluxDB node
 #   - influxdb: InfluxDB timeseries database
 #   - grafana: Grafana dashboard
 #
